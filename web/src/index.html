@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ReserveStable: A pegged-pair pool that pays arbitrageurs to rebalance it, out of a fund it filled while going wrong</title>
+<meta name="description" content="A pegged-pair pool that pays arbitrageurs to rebalance it, out of a fund it filled while going wrong.">
+<link rel="canonical" href="https://reserve-stable.pages.dev/">
+<meta name="robots" content="index, follow, max-image-preview:large">
+<meta name="theme-color" content="#07080b">
+
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="ReserveStable">
+<meta property="og:title" content="ReserveStable">
+<meta property="og:description" content="A pegged-pair pool that pays arbitrageurs to rebalance it, out of a fund it filled while going wrong.">
+<meta property="og:url" content="https://reserve-stable.pages.dev/">
+<meta property="og:image" content="https://reserve-stable.pages.dev/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="ReserveStable">
+<meta name="twitter:description" content="A pegged-pair pool that pays arbitrageurs to rebalance it, out of a fund it filled while going wrong.">
+<meta name="twitter:image" content="https://reserve-stable.pages.dev/og.png">
+
+<link rel="stylesheet" href="/assets/site.css">
+<link rel="alternate" type="text/plain" title="For language models" href="/llms.txt">
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js"}}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareSourceCode","name":"ReserveStable","description":"A pegged-pair pool that pays arbitrageurs to rebalance it, out of a fund it filled while going wrong.","url":"https://reserve-stable.pages.dev","codeRepository":"https://github.com/nirholas/reserve-stable","programmingLanguage":"Solidity","runtimePlatform":"Ethereum Virtual Machine","license":"https://www.apache.org/licenses/LICENSE-2.0","keywords":"curve, stablecoin, custom-curve, rebalancing, no-admin","isPartOf":{"@type":"WebSite","name":"HookForge","url":"https://hookforge.pages.dev"}}</script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="masthead">
+  <div class="shell masthead__inner">
+    <a class="brand" href="/">ReserveStable</a>
+    <nav aria-label="Primary">
+      <a href="#how">How it works</a>
+      <a href="#using">Using it</a>
+      <a href="#deploy">Deploy</a>
+      <a href="https://github.com/nirholas/reserve-stable" rel="noopener">GitHub</a>
+      <a href="https://hookforge.pages.dev" rel="noopener">Catalogue</a>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+  <div class="stage">
+    <div class="scene">
+      <canvas data-permissions="{&quot;afterRemoveLiquidityReturnsDelta&quot;:false,&quot;afterAddLiquidityReturnsDelta&quot;:false,&quot;afterSwapReturnsDelta&quot;:false,&quot;beforeSwapReturnsDelta&quot;:true,&quot;afterDonate&quot;:false,&quot;beforeDonate&quot;:false,&quot;afterSwap&quot;:false,&quot;beforeSwap&quot;:true,&quot;afterRemoveLiquidity&quot;:false,&quot;beforeRemoveLiquidity&quot;:true,&quot;afterAddLiquidity&quot;:false,&quot;beforeAddLiquidity&quot;:true,&quot;afterInitialize&quot;:false,&quot;beforeInitialize&quot;:true}" aria-hidden="true"></canvas>
+      <p class="scene__fallback">ReserveStable implements 5 of the fourteen Uniswap v4 callbacks: beforeInitialize, beforeAddLiquidity, beforeRemoveLiquidity, beforeSwap, beforeSwapReturnsDelta.</p>
+    </div>
+    <p class="scene__hint">drag to orbit</p>
+
+  <section class="shell hero">
+    <p class="eyebrow">Uniswap v4 hook &middot; Curves</p>
+    <h1>ReserveStable</h1>
+    <p class="lede">A pegged-pair pool that pays arbitrageurs to rebalance it, out of a fund it filled while going wrong.</p>
+    <div class="cta-row">
+      <a class="btn btn--primary" href="https://github.com/nirholas/reserve-stable" rel="noopener">Source on GitHub</a>
+      <a class="btn" href="#using">Use it in a pool</a>
+      <a class="btn" href="/hook.json">Manifest JSON</a>
+    </div>
+
+    <dl class="stats">
+      <div class="stat"><dt>Family</dt><dd>Curves</dd></div>
+      <div class="stat"><dt>Callbacks</dt><dd>5 of 14</dd></div>
+      <div class="stat"><dt>Fee</dt><dd>static</dd></div>
+      <div class="stat"><dt>Admin keys</dt><dd>none</dd></div>
+      <div class="stat"><dt>Licence</dt><dd>Apache-2.0</dd></div>
+    </dl>
+  </section>
+  </div>
+
+  <section class="shell">
+    <h2 id="how">How it works</h2>
+      <p>Every stable pool in production prices with a curve that is flat near parity and steep away from it, and every one of them shares a defect: the only force restoring balance is the price the curve happens to quote. When one side runs low, the pool makes it expensive to take more, and then it waits. Nothing pays anybody to bring the missing side back.</p>
+      <p>Arbitrage does it eventually, if an external venue happens to make it worth doing, and if it does not, the pool sits lopsided with its deep side useless and its shallow side unusable. This pool prices at parity and adjusts with a signed spread rather than a curve. A trade that takes from the scarce side pays a spread that grows as that side gets scarcer, from `baseSpreadBps` up to `maxSpreadBps`.</p>
+      <p>That much is ordinary. The part that is not: everything charged above the base rate goes into an explicit stability fund rather than to the providers, and a trade that takes from the *abundant* side is paid a rebate out of that fund. Restoring the balance is not merely cheaper than breaking it, it is profitable, and it is profitable in exact proportion to how badly the pool needs it.</p>
+      <p>The fund is what makes this safe rather than a subsidy with no source. It only ever grows from spread charged above the base rate, and no rebate can exceed it, so across any sequence of trades the pool pays out strictly less than it took in for this purpose. Providers cannot be made worse off than they would have been in the same pool charging a flat `baseSpreadBps` and nothing else, which is a property, not an aspiration: it follows from the fund being a separate balance that a rebate can only draw down.</p>
+      <p>The round trip does not pay either. `maxRebateBps` is capped at `maxSpreadBps - baseSpreadBps` at construction, so breaking the balance and restoring it costs the base spread twice and recovers at most what breaking it paid in. The fund is also empty when the pool is balanced, which is exactly when a round-tripper would want to start.</p>
+      <p>Underneath both of those sits a floor: no swap may leave either side holding less than `minSideBps` of the pool. That is the band. A pegged pool that will sell the last unit of one side at any price is a pool that can be emptied, and no spread schedule fixes that, because the last unit is worth more than any finite fee.</p>
+      <p>Reserves are normalized to eighteen decimals from the units given at construction, so a six-decimal stablecoin and an eighteen-decimal one are compared correctly rather than off by a factor of a trillion.</p>
+
+    <div class="callout callout--prior"><h3>Prior art</h3><p>Curve's StableSwap and the v4 hooks that reimplement it quote a flat-then-steep curve. Frax's AMOs, Angle's transmuter and Reflexer's redemption rate move a peg by minting or by changing a target, all with a governed controller. Dynamic-fee hooks price imbalance in one direction only, because a fee cannot be negative.</p>
+      <p>A v4 pool that pays a bounded negative spread to whoever restores its balance, funded solely by the surcharge it collected while losing that balance, and provably unable to pay out more than it took in, is the contribution here.</p></div>
+    <div class="callout callout--warn"><h3>Where it does not help</h3><p>Only sound for a genuinely pegged pair. The fund is denominated in normalized units and treats one side as interchangeable with the other, which is true while the peg holds and false the moment it does not: against an asset that has actually broken, this pool will pay a rebate for taking the good side and call it rebalancing. Pair it with a depeg guard rather than trusting it alone.</p>
+      <p>The pricing is also constant-sum, so it never quotes anything but parity plus a spread, and it does not move the v4 pool price at all, which means it publishes no oracle a downstream contract can read.</p></div>
+
+    <h2 id="using">Using it</h2>
+    <p>
+      Uniswap v4 removed <code>hookData</code> from <code>initialize</code>, so per-pool parameters arrive out of band.
+      Fix them for a pool key whose pool does not exist yet, then initialize. Nobody can change them afterwards,
+      including you.
+    </p>
+    <pre><code>poolManager.initialize(key, startingSqrtPriceX96);</code></pre>
+    
+
+    <h3>Parameters</h3>
+    <p>This hook takes no per-pool configuration.</p>
+
+    <h3>From TypeScript</h3>
+    <pre><code>npm i @hookforge/sdk
+
+import {getHook, hookAddress, poolKeyFor} from "@hookforge/sdk";
+
+const hook = getHook("reserve-stable");
+const key  = poolKeyFor({
+  hook: hookAddress("reserve-stable", 8453),   // Base
+  currencyA: USDC, currencyB: WETH,
+  tickSpacing: 60,
+});</code></pre>
+
+    <h2>What it reverts with</h2>
+    <table>
+        <thead><tr><th>Error</th><th>Meaning</th></tr></thead>
+        <tbody><tr><td><code>AlreadyInitialized()</code></td><td>Hook was already initialized.</td></tr>
+          <tr><td><code>AmountTooSmall()</code></td><td>A deposit was too small to mint any shares, or a withdrawal too small to return anything.</td></tr>
+          <tr><td><code>BreaksFloor(uint256,uint256)</code></td><td>The swap would push a side below the floor, which is the one thing this pool will not do.</td></tr>
+          <tr><td><code>ERC20InsufficientAllowance(address,uint256,uint256)</code></td><td>Indicates a failure with the <code>spender</code>’s <code>allowance</code>. Used in transfers.</td></tr>
+          <tr><td><code>ERC20InsufficientBalance(address,uint256,uint256)</code></td><td>Indicates an error related to the current <code>balance</code> of a <code>sender</code>. Used in transfers.</td></tr>
+          <tr><td><code>ERC20InvalidApprover(address)</code></td><td>Indicates a failure with the <code>approver</code> of a token to be approved. Used in approvals.</td></tr>
+          <tr><td><code>ERC20InvalidReceiver(address)</code></td><td>Indicates a failure with the token <code>receiver</code>. Used in transfers.</td></tr>
+          <tr><td><code>ERC20InvalidSender(address)</code></td><td>Indicates a failure with the token <code>sender</code>. Used in transfers.</td></tr>
+          <tr><td><code>ERC20InvalidSpender(address)</code></td><td>Indicates a failure with the <code>spender</code> to be approved. Used in approvals.</td></tr>
+          <tr><td><code>ExpiredPastDeadline()</code></td><td>A liquidity modification order was attempted to be executed after the deadline.</td></tr>
+          <tr><td><code>FundInsolvent(uint256,uint256)</code></td><td>A rebate came out larger than the fund backing it, which the quote is supposed to make impossible.</td></tr>
+          <tr><td><code>InsufficientInitialLiquidity()</code></td><td>The first deposit must exceed the permanently locked minimum.</td></tr>
+          <tr><td><code>InvalidFloor()</code></td><td>The floor must leave room to trade, so it has to be below half the pool.</td></tr>
+          <tr><td><code>InvalidHalfPoint()</code></td><td>The half point of the spread curve cannot be zero, or the spread jumps to its cap immediately.</td></tr>
+          <tr><td><code>InvalidNativePayer(address)</code></td><td>The native currency was settled on behalf of a <code>payer</code> other than the contract paying it.</td></tr>
+          <tr><td><code>InvalidNativeValue()</code></td><td>Native currency was not sent with the correct amount.</td></tr>
+          <tr><td><code>InvalidSpread()</code></td><td>The base spread must sit below the cap, and the cap below a tenth.</td></tr>
+          <tr><td><code>InvalidUnit()</code></td><td>A unit must be a power of ten no larger than 1e18, because that is what a token's decimals can produce.</td></tr>
+          <tr><td><code>LiquidityOnlyViaHook()</code></td><td>Liquidity was attempted to be added or removed via the <code>PoolManager</code> instead of the hook.</td></tr>
+          <tr><td><code>NoReserves()</code></td><td>The pool holds nothing yet, so there is no balance to price against.</td></tr>
+          <tr><td><code>PoolNotInitialized()</code></td><td>Pool was not initialized.</td></tr>
+          <tr><td><code>RebateTooLarge()</code></td><td>A rebate larger than the surcharge that funds it would make the round trip profitable.</td></tr>
+          <tr><td><code>SafeERC20FailedOperation(address)</code></td><td>An operation with an ERC-20 token failed.</td></tr>
+          <tr><td><code>TooMuchSlippage()</code></td><td>Principal delta of liquidity modification resulted in too much slippage.</td></tr>
+          <tr><td><code>ValueTooLarge()</code></td><td>A quantity too large to be represented as a signed integer, which no real reserve reaches.</td></tr></tbody>
+      </table>
+
+    <h2>The callbacks it claims</h2>
+    <p>
+      Uniswap v4 reads a hook's permissions from the low fourteen bits of its own address, which is why deploying one
+      means mining a CREATE2 salt. This hook claims 5, so every deployment of it has an address ending
+      in <code>0x2a88</code>.
+    </p>
+    <ul class="flags"><li class="flag flag--on">beforeInitialize</li><li class="flag">afterInitialize</li><li class="flag flag--on">beforeAddLiquidity</li><li class="flag">afterAddLiquidity</li><li class="flag flag--on">beforeRemoveLiquidity</li><li class="flag">afterRemoveLiquidity</li><li class="flag flag--on">beforeSwap</li><li class="flag">afterSwap</li><li class="flag">beforeDonate</li><li class="flag">afterDonate</li><li class="flag flag--on">beforeSwapReturnsDelta</li><li class="flag">afterSwapReturnsDelta</li><li class="flag">afterAddLiquidityReturnsDelta</li><li class="flag">afterRemoveLiquidityReturnsDelta</li></ul>
+
+    <h2>It says what it is, on-chain</h2>
+    <p>
+      Nothing about a hook's address tells an indexer, a wallet, a router or an agent what the pool does, which is why
+      hook discovery today is a curated list. This hook answers for itself, in one <code>eth_call</code>, with no
+      registry in the loop.
+    </p>
+    <pre><code>cast call $HOOK "hookName()(string)"    # ReserveStable
+cast call $HOOK "specURI()(string)"     # https://reserve-stable.pages.dev/hook.json
+cast call $HOOK "hookTags()(string[])"  # curve, stablecoin, custom-curve, rebalancing, no-admin</code></pre>
+
+    <h2 id="deploy">Build, test and deploy</h2>
+    <pre><code>git clone --recurse-submodules https://github.com/nirholas/reserve-stable
+cd reserve-stable
+forge build &amp;&amp; forge test
+
+# Dry run: mines the salt, prints the address, sends nothing.
+forge script script/Deploy.s.sol --rpc-url $RPC_URL
+
+# For real.
+forge script script/Deploy.s.sol --rpc-url $RPC_URL --broadcast --verify</code></pre>
+
+    <div class="callout callout--warn">
+      <h3>Status</h3>
+      <p>
+        <strong>Unaudited.</strong> Built to an audited shape, on OpenZeppelin's audited hook bases, and tested against
+        a real <code>PoolManager</code>. No third party has reviewed it. Read "where it does not help" above before
+        putting money behind it. Not affiliated with Uniswap Labs.
+      </p>
+    </div>
+  </section>
+
+  <section class="shell">
+    <h2 id="try">Try it</h2>
+    <p>
+      This is the hook running, not a picture of it. Connect a wallet on a chain it is deployed to, or bring the whole
+      stack up locally in one command and use it with no funds and no wallet risk at all.
+    </p>
+    <div class="demo" data-demo="reserve-stable">
+      <div class="panel panel--empty">
+        <p>Loading the demo… if this does not change, JavaScript is blocked and the demo cannot run.</p>
+      </div>
+    </div>
+    <details class="raw">
+      <summary>Run the whole thing locally</summary>
+      <pre><code>git clone --recurse-submodules https://github.com/nirholas/reserve-stable
+cd reserve-stable
+
+anvil &amp;
+forge script script/DeployLocal.s.sol --rpc-url http://127.0.0.1:8545 --broadcast \
+  --private-key 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
+
+node web/build.mjs &amp;&amp; npx serve web/dist</code></pre>
+      <p class="muted">
+        The deploy script writes <code>web/local.json</code> itself and the build merges it, so the page points at the
+        chain you just created without you editing anything. Point a wallet at
+        <code>http://127.0.0.1:8545</code> and every button on this page works.
+      </p>
+      <p class="muted">
+        Anvil's first account is pre-funded and its key is public by design. Never use it anywhere real.
+      </p>
+    </details>
+  </section>
+  <script type="application/json" id="deployments">{"chains":{},"errors":[{"type":"error","name":"AlreadyInitialized","inputs":[]},{"type":"error","name":"AmountTooSmall","inputs":[]},{"type":"error","name":"BreaksFloor","inputs":[{"name":"remaining","type":"uint256","internalType":"uint256"},{"name":"floor","type":"uint256","internalType":"uint256"}]},{"type":"error","name":"ERC20InsufficientAllowance","inputs":[{"name":"spender","type":"address","internalType":"address"},{"name":"allowance","type":"uint256","internalType":"uint256"},{"name":"needed","type":"uint256","internalType":"uint256"}]},{"type":"error","name":"ERC20InsufficientBalance","inputs":[{"name":"sender","type":"address","internalType":"address"},{"name":"balance","type":"uint256","internalType":"uint256"},{"name":"needed","type":"uint256","internalType":"uint256"}]},{"type":"error","name":"ERC20InvalidApprover","inputs":[{"name":"approver","type":"address","internalType":"address"}]},{"type":"error","name":"ERC20InvalidReceiver","inputs":[{"name":"receiver","type":"address","internalType":"address"}]},{"type":"error","name":"ERC20InvalidSender","inputs":[{"name":"sender","type":"address","internalType":"address"}]},{"type":"error","name":"ERC20InvalidSpender","inputs":[{"name":"spender","type":"address","internalType":"address"}]},{"type":"error","name":"ExpiredPastDeadline","inputs":[]},{"type":"error","name":"FundInsolvent","inputs":[{"name":"paid","type":"uint256","internalType":"uint256"},{"name":"held","type":"uint256","internalType":"uint256"}]},{"type":"error","name":"HookNotImplemented","inputs":[]},{"type":"error","name":"InsufficientInitialLiquidity","inputs":[]},{"type":"error","name":"InvalidFloor","inputs":[]},{"type":"error","name":"InvalidHalfPoint","inputs":[]},{"type":"error","name":"InvalidNativePayer","inputs":[{"name":"payer","type":"address","internalType":"address"}]},{"type":"error","name":"InvalidNativeValue","inputs":[]},{"type":"error","name":"InvalidPool","inputs":[]},{"type":"error","name":"InvalidSpread","inputs":[]},{"type":"error","name":"InvalidUnit","inputs":[]},{"type":"error","name":"LiquidityOnlyViaHook","inputs":[]},{"type":"error","name":"NoReserves","inputs":[]},{"type":"error","name":"NotPoolManager","inputs":[]},{"type":"error","name":"PoolNotInitialized","inputs":[]},{"type":"error","name":"RebateTooLarge","inputs":[]},{"type":"error","name":"SafeERC20FailedOperation","inputs":[{"name":"token","type":"address","internalType":"address"}]},{"type":"error","name":"TooMuchSlippage","inputs":[]},{"type":"error","name":"ValueTooLarge","inputs":[]}],"demo":{"panel":"curve","title":"A pool that pays you to fix it","lede":"Prices at parity with a signed spread. Take from the side that is running low and you pay a surcharge that goes into a stability fund. Take from the side that is too full and the fund pays you for the rebalance. Drain one side and watch the other direction turn into a rebate.","stats":[{"name":"adjustmentBps","label":"Selling currency0","inputs":["bool"],"args":[true],"outputs":["int256"],"format":"sbps"},{"name":"adjustmentBps","label":"Buying currency0","inputs":["bool"],"args":[false],"outputs":["int256"],"format":"sbps"},{"name":"stabilityFund","label":"Stability fund","format":"token"}],"localDeploy":{"flags":"Hooks.BEFORE_INITIALIZE_FLAG | Hooks.BEFORE_ADD_LIQUIDITY_FLAG | Hooks.BEFORE_REMOVE_LIQUIDITY_FLAG | Hooks.BEFORE_SWAP_FLAG | Hooks.BEFORE_SWAP_RETURNS_DELTA_FLAG","curve":true,"constructorArgs":"IPoolManager(address(manager)), 1e18, 1e18, 4, 200, 196, 0.25e18, 500, \"Reserve Stable LP\", \"RSTBL-LP\"","dynamicFee":false}}}</script>
+  <script type="module" src="/assets/demo.js"></script>
+</main>
+
+<footer class="foot">
+  <div class="shell">
+    <p>
+      <a href="https://github.com/nirholas/reserve-stable" rel="noopener">Source</a> &middot;
+      <a href="/hook.json">Manifest</a> &middot;
+      <a href="/llms.txt">llms.txt</a> &middot;
+      <a href="https://hookforge.pages.dev" rel="noopener">The rest of the catalogue</a>
+    </p>
+    <p>Apache-2.0 licensed. Not affiliated with Uniswap Labs.</p>
+  </div>
+</footer>
+<script type="module" src="/assets/scene.js"></script>
+</body>
+</html>

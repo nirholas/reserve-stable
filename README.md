@@ -1,0 +1,133 @@
+# ReserveStable
+
+**A pegged-pair pool that pays arbitrageurs to rebalance it, out of a fund it filled while going wrong.**
+
+A production Uniswap v4 hook. It holds no funds and takes no fee for itself. No owner, no pause switch, no upgrade path.
+
+- **Site:** https://reserve-stable.pages.dev
+- **Catalogue:** https://hookforge.pages.dev
+- **Contract:** [`src/hooks/ReserveStableHook.sol`](src/hooks/ReserveStableHook.sol)
+- **Licence:** Apache-2.0
+
+## How it works
+
+Every stable pool in production prices with a curve that is flat near parity and steep away from it, and every one of them shares a defect: the only force restoring balance is the price the curve happens to quote. When one side runs low, the pool makes it expensive to take more, and then it waits. Nothing pays anybody to bring the missing side back.
+
+Arbitrage does it eventually, if an external venue happens to make it worth doing, and if it does not, the pool sits lopsided with its deep side useless and its shallow side unusable. This pool prices at parity and adjusts with a signed spread rather than a curve. A trade that takes from the scarce side pays a spread that grows as that side gets scarcer, from `baseSpreadBps` up to `maxSpreadBps`.
+
+That much is ordinary. The part that is not: everything charged above the base rate goes into an explicit stability fund rather than to the providers, and a trade that takes from the *abundant* side is paid a rebate out of that fund. Restoring the balance is not merely cheaper than breaking it, it is profitable, and it is profitable in exact proportion to how badly the pool needs it.
+
+The fund is what makes this safe rather than a subsidy with no source. It only ever grows from spread charged above the base rate, and no rebate can exceed it, so across any sequence of trades the pool pays out strictly less than it took in for this purpose. Providers cannot be made worse off than they would have been in the same pool charging a flat `baseSpreadBps` and nothing else, which is a property, not an aspiration: it follows from the fund being a separate balance that a rebate can only draw down.
+
+The round trip does not pay either. `maxRebateBps` is capped at `maxSpreadBps - baseSpreadBps` at construction, so breaking the balance and restoring it costs the base spread twice and recovers at most what breaking it paid in. The fund is also empty when the pool is balanced, which is exactly when a round-tripper would want to start.
+
+Underneath both of those sits a floor: no swap may leave either side holding less than `minSideBps` of the pool. That is the band. A pegged pool that will sell the last unit of one side at any price is a pool that can be emptied, and no spread schedule fixes that, because the last unit is worth more than any finite fee.
+
+Reserves are normalized to eighteen decimals from the units given at construction, so a six-decimal stablecoin and an eighteen-decimal one are compared correctly rather than off by a factor of a trillion.
+
+## Prior art
+
+Curve's StableSwap and the v4 hooks that reimplement it quote a flat-then-steep curve. Frax's AMOs, Angle's transmuter and Reflexer's redemption rate move a peg by minting or by changing a target, all with a governed controller. Dynamic-fee hooks price imbalance in one direction only, because a fee cannot be negative. A v4 pool that pays a bounded negative spread to whoever restores its balance, funded solely by the surcharge it collected while losing that balance, and provably unable to pay out more than it took in, is the contribution here.
+
+## Where it does not help
+
+Only sound for a genuinely pegged pair. The fund is denominated in normalized units and treats one side as interchangeable with the other, which is true while the peg holds and false the moment it does not: against an asset that has actually broken, this pool will pay a rebate for taking the good side and call it rebalancing. Pair it with a depeg guard rather than trusting it alone. The pricing is also constant-sum, so it never quotes anything but parity plus a spread, and it does not move the v4 pool price at all, which means it publishes no oracle a downstream contract can read.
+
+## Using it
+
+Uniswap v4 removed `hookData` from `initialize`, so per-pool parameters arrive out of band. Fix them for a pool key whose pool does not exist yet, then initialize. Nobody can change them afterwards, including you.
+
+```solidity
+// This hook needs no configuration.
+
+poolManager.initialize(key, startingSqrtPriceX96);
+```
+
+
+### Parameters
+
+This hook takes no per-pool configuration.
+
+## What it reverts with
+
+| Error | Meaning |
+| --- | --- |
+| `AlreadyInitialized()` | Hook was already initialized. |
+| `AmountTooSmall()` | A deposit was too small to mint any shares, or a withdrawal too small to return anything. |
+| `BreaksFloor(uint256,uint256)` | The swap would push a side below the floor, which is the one thing this pool will not do. |
+| `ERC20InsufficientAllowance(address,uint256,uint256)` | Indicates a failure with the `spender`’s `allowance`. Used in transfers. |
+| `ERC20InsufficientBalance(address,uint256,uint256)` | Indicates an error related to the current `balance` of a `sender`. Used in transfers. |
+| `ERC20InvalidApprover(address)` | Indicates a failure with the `approver` of a token to be approved. Used in approvals. |
+| `ERC20InvalidReceiver(address)` | Indicates a failure with the token `receiver`. Used in transfers. |
+| `ERC20InvalidSender(address)` | Indicates a failure with the token `sender`. Used in transfers. |
+| `ERC20InvalidSpender(address)` | Indicates a failure with the `spender` to be approved. Used in approvals. |
+| `ExpiredPastDeadline()` | A liquidity modification order was attempted to be executed after the deadline. |
+| `FundInsolvent(uint256,uint256)` | A rebate came out larger than the fund backing it, which the quote is supposed to make impossible. |
+| `InsufficientInitialLiquidity()` | The first deposit must exceed the permanently locked minimum. |
+| `InvalidFloor()` | The floor must leave room to trade, so it has to be below half the pool. |
+| `InvalidHalfPoint()` | The half point of the spread curve cannot be zero, or the spread jumps to its cap immediately. |
+| `InvalidNativePayer(address)` | The native currency was settled on behalf of a `payer` other than the contract paying it. |
+| `InvalidNativeValue()` | Native currency was not sent with the correct amount. |
+| `InvalidSpread()` | The base spread must sit below the cap, and the cap below a tenth. |
+| `InvalidUnit()` | A unit must be a power of ten no larger than 1e18, because that is what a token's decimals can produce. |
+| `LiquidityOnlyViaHook()` | Liquidity was attempted to be added or removed via the `PoolManager` instead of the hook. |
+| `NoReserves()` | The pool holds nothing yet, so there is no balance to price against. |
+| `PoolNotInitialized()` | Pool was not initialized. |
+| `RebateTooLarge()` | A rebate larger than the surcharge that funds it would make the round trip profitable. |
+| `SafeERC20FailedOperation(address)` | An operation with an ERC-20 token failed. |
+| `TooMuchSlippage()` | Principal delta of liquidity modification resulted in too much slippage. |
+| `ValueTooLarge()` | A quantity too large to be represented as a signed integer, which no real reserve reaches. |
+
+## The callbacks it claims
+
+Uniswap v4 reads a hook's permissions from the low fourteen bits of its own address, which is why deploying one means mining a CREATE2 salt. This hook claims 5 of the fourteen:
+
+- `beforeInitialize`
+- `beforeAddLiquidity`
+- `beforeRemoveLiquidity`
+- `beforeSwap`
+- `beforeSwapReturnsDelta`
+
+Mask: `0x2a88`, so every deployment of this hook has an address ending in those bits.
+
+## It says what it is, on-chain
+
+Every hook in this family implements `IHookMetadata`: four view functions that let an indexer, a wallet, a router or an agent identify a hook from its address alone, with no registry in the loop.
+
+```bash
+cast call $HOOK "hookName()(string)"    # ReserveStable
+cast call $HOOK "hookVersion()(string)" # 1.0.0
+cast call $HOOK "specURI()(string)"     # the machine-readable manifest
+cast call $HOOK "hookTags()(string[])"  # curve, stablecoin, custom-curve, rebalancing, no-admin
+```
+
+The manifest this repository ships as [`hook.json`](hook.json) is what `specURI()` points at.
+
+## Build and test
+
+```bash
+git clone --recurse-submodules https://github.com/nirholas/reserve-stable
+cd reserve-stable
+forge build
+forge test
+```
+
+Foundry 1.7 or newer, Solidity 0.8.26, EVM version `cancun` (Uniswap v4 requires transient storage).
+
+## Deploy
+
+```bash
+# Dry run: mines the salt and prints the address without sending anything.
+forge script script/Deploy.s.sol --rpc-url $RPC_URL
+
+# For real.
+forge script script/Deploy.s.sol --rpc-url $RPC_URL --broadcast --verify
+```
+
+Needs `PRIVATE_KEY` in the environment and a funded deployer on the target chain. See [`docs/deploying.md`](docs/deploying.md).
+
+## Status
+
+**Unaudited.** Built to an audited shape, on OpenZeppelin's audited hook bases, and tested against a real `PoolManager`. No third party has reviewed it. Read "where it does not help" above before putting money behind it.
+
+Not affiliated with Uniswap Labs.
