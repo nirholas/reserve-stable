@@ -1,9 +1,8 @@
+# reserve-stable
+
+> A pegged-pair pool that pays arbitrageurs to rebalance it, out of a fund it filled while going wrong.
+
 # ReserveStable
-
-<!-- three.ws:badges -->
-[![GitHub stars](https://img.shields.io/github/stars/nirholas/reserve-stable?style=flat&logo=github)](https://github.com/nirholas/reserve-stable/stargazers) [![License](https://img.shields.io/github/license/nirholas/reserve-stable?style=flat)](https://github.com/nirholas/reserve-stable/blob/HEAD/LICENSE) [![Last commit](https://img.shields.io/github/last-commit/nirholas/reserve-stable?style=flat)](https://github.com/nirholas/reserve-stable/commits) [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen?style=flat)](https://github.com/nirholas/reserve-stable/pulls) [![AI agent friendly](https://img.shields.io/badge/AI%20agents-AGENTS.md%20%2B%20llms.txt-6d5dfc?style=flat)](https://github.com/nirholas/reserve-stable/blob/HEAD/AGENTS.md)
-<!-- /three.ws:badges -->
-
 
 **A pegged-pair pool that pays arbitrageurs to rebalance it, out of a fund it filled while going wrong.**
 
@@ -140,26 +139,3 @@ Not affiliated with Uniswap Labs.
 ## Star History
 
 [![Star History Chart](https://api.star-history.com/svg?repos=nirholas/reserve-stable&type=Date)](https://www.star-history.com/#nirholas/reserve-stable&Date)
-
-<!-- three.ws:growth -->
-## Support the project
-
-If reserve-stable saves you time, **[star it on GitHub](https://github.com/nirholas/reserve-stable)**. Stars are how other developers and AI agents find the repositories worth trusting, and they cost you one click.
-
-Know someone who would use it? [Post on X](https://twitter.com/intent/tweet?text=reserve-stable%3A%20A%20pegged-pair%20pool%20that%20pays%20arbitrageurs%20to%20rebalance%20it%2C%20out%20of%20a%20fund%20it%20filled%20while%20going%20wrong&url=https%3A%2F%2Fgithub.com%2Fnirholas%2Freserve-stable) · [Share on Bluesky](https://bsky.app/intent/compose?text=reserve-stable%3A%20A%20pegged-pair%20pool%20that%20pays%20arbitrageurs%20to%20rebalance%20it%2C%20out%20of%20a%20fund%20it%20filled%20while%20going%20wrong%20https%3A%2F%2Fgithub.com%2Fnirholas%2Freserve-stable) · [Share on LinkedIn](https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fgithub.com%2Fnirholas%2Freserve-stable) · [Submit to Hacker News](https://news.ycombinator.com/submitlink?u=https%3A%2F%2Fgithub.com%2Fnirholas%2Freserve-stable&t=reserve-stable%3A%20A%20pegged-pair%20pool%20that%20pays%20arbitrageurs%20to%20rebalance%20it%2C%20out%20of%20a%20fund%20it%20filled%20while%20going%20wrong) · [Share on Reddit](https://www.reddit.com/submit?url=https%3A%2F%2Fgithub.com%2Fnirholas%2Freserve-stable&title=reserve-stable%3A%20A%20pegged-pair%20pool%20that%20pays%20arbitrageurs%20to%20rebalance%20it%2C%20out%20of%20a%20fund%20it%20filled%20while%20going%20wrong)
-
-## Built for AI agents too
-
-Coding agents and LLM tooling can read this repo directly: [AGENTS.md](./AGENTS.md), [llms.txt](./llms.txt), [llms-full.txt](./llms-full.txt). Point an agent at `https://github.com/nirholas/reserve-stable` and it has the context it needs.
-
-## More from the same author
-
-- [All repositories by nirholas](https://github.com/nirholas/nirholas#readme): the full catalog, grouped by topic
-- [three.ws](https://three.ws): the platform for 3D AI agents with Solana wallets, a skill marketplace and x402 payments
-- Questions or ideas: [open an issue](https://github.com/nirholas/reserve-stable/issues) or [start a discussion](https://github.com/nirholas/reserve-stable/discussions)
-
-## Contributors
-
-[![Contributors](https://contrib.rocks/image?repo=nirholas/reserve-stable)](https://github.com/nirholas/reserve-stable/graphs/contributors)
-
-<!-- /three.ws:growth -->
